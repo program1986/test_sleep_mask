@@ -40,20 +40,23 @@ public class MainActivity extends AppCompatActivity  implements View.OnClickList
     private TextView log_view;
     private List<BLEDeviceBean> devices = new ArrayList<>();
     private DevicesAdapter devicesAdapter;
-    private MediaPlayer mediaPlayer ;
+    private MediaPlayer mediaPlayer = new MediaPlayer();;
+    private MediaPlayer nMediaPlayer = new MediaPlayer();;
     //播放
     private Button btn_play,btn_stop;
 
     private void initMediaPlayer()  {
 
-        mediaPlayer = MediaPlayer.create(this,R.raw.wav1);
-        try {
-                  mediaPlayer.prepare();
-        } catch (Exception e) {
-            log_show("Music open error");
-            e.printStackTrace();
 
-        }
+
+        mediaPlayer = mediaPlayer.create(getApplicationContext(),R.raw.wav1);
+        //try {
+        //          mediaPlayer.prepareAsync();
+        ///} catch (Exception e) {
+        //    log_show("Music open error");
+        //    e.printStackTrace();
+
+        //}
         /*
         AssetFileDescriptor file = getResources().openRawResourceFd(R.raw.wav1);
         try {
@@ -67,10 +70,10 @@ public class MainActivity extends AppCompatActivity  implements View.OnClickList
         }
         */
 
-        mediaPlayer.setVolume(0.5f, 0.5f);
+        //mediaPlayer.setVolume(0.5f, 0.5f);
         mediaPlayer.setLooping(true);
         log_show("Music init complete");
-       // mp.start();
+        //mediaPlayer.start();
     }
 
     private void log_show(String message) {
@@ -326,12 +329,42 @@ public class MainActivity extends AppCompatActivity  implements View.OnClickList
         switch (v.getId()){
             case R.id.btn_play:
                 log_show("Play");
-                mediaPlayer.start();
+                testLoopPlayer();
+                //mediaPlayer.start();// 这样使用会出现停顿
                 //如果没在播放中，立刻开始播放。
                 //if(!mediaPlayer.isPlaying()){
                 //    mediaPlayer.start();
+                break;
             case R.id.btn_stop:
                 mediaPlayer.stop();
+                break;
                 }
+    }
+
+    private int mPlayResId = R.raw.wav1;
+    public void testLoopPlayer() {
+        mediaPlayer = MediaPlayer.create(this, mPlayResId);
+        mediaPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
+            @Override
+            public void onPrepared(MediaPlayer mediaPlayer) {
+                mediaPlayer.start();
+            }
+        });
+        createNextMediaPlayer();
+    }
+
+    private void createNextMediaPlayer() {
+        nMediaPlayer = MediaPlayer.create(this, mPlayResId);
+        mediaPlayer.setNextMediaPlayer(nMediaPlayer);
+        mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+            @Override
+            public void onCompletion(MediaPlayer mp) {
+                mp.release();
+
+                mediaPlayer = nMediaPlayer;
+
+                createNextMediaPlayer();
+            }
+        });
     }
 }
