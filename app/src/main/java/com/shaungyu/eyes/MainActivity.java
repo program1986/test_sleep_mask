@@ -13,8 +13,10 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
+import android.content.Context;
 import android.content.pm.PackageManager;
 import android.content.res.AssetFileDescriptor;
+import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.Build;
 import android.os.Bundle;
@@ -44,6 +46,7 @@ public class MainActivity extends AppCompatActivity  implements View.OnClickList
     private MediaPlayer nMediaPlayer = new MediaPlayer();;
     //播放
     private Button btn_play,btn_stop;
+    private AudioManager audioManager;
 
     private void initMediaPlayer()  {
 
@@ -56,7 +59,7 @@ public class MainActivity extends AppCompatActivity  implements View.OnClickList
         //    log_show("Music open error");
         //    e.printStackTrace();
 
-        //}
+        //
         /*
         AssetFileDescriptor file = getResources().openRawResourceFd(R.raw.wav1);
         try {
@@ -204,12 +207,32 @@ public class MainActivity extends AppCompatActivity  implements View.OnClickList
     };
     private Button sendButton;
 
+    public void changeToHeadset(){
+        audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
+        audioManager.stopBluetoothSco();
+        audioManager.setBluetoothScoOn(false);
+        audioManager.setSpeakerphoneOn(false);
+    }
+
+    public void changeToReceiver(){
+        audioManager.setSpeakerphoneOn(false);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB){
+            audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
+        } else {
+            audioManager.setMode(AudioManager.MODE_IN_CALL);
+        }
+    }
+
 
     @RequiresApi(api = Build.VERSION_CODES.M)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        audioManager = (AudioManager) getApplicationContext().getSystemService(Context.AUDIO_SERVICE);
+        //changeToHeadset();
+        changeToReceiver();
         if (this.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, PERMISSION_REQUEST_COARSE_LOCATION);
         }
@@ -329,6 +352,9 @@ public class MainActivity extends AppCompatActivity  implements View.OnClickList
         switch (v.getId()){
             case R.id.btn_play:
                 log_show("Play");
+                //解决方法
+                //https://stackoverflow.com/questions/26274182/not-able-to-achieve-gapless-audio-looping-so-far-on-android
+
                 testLoopPlayer();
                 //mediaPlayer.start();// 这样使用会出现停顿
                 //如果没在播放中，立刻开始播放。
