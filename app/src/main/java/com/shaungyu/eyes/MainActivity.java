@@ -2,6 +2,8 @@ package com.shaungyu.eyes;
 
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.DividerItemDecoration;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -12,8 +14,11 @@ import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
 import android.content.pm.PackageManager;
+import android.content.res.AssetFileDescriptor;
+import android.media.MediaPlayer;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.text.TextUtils;
 import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
@@ -21,10 +26,12 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity  implements View.OnClickListener {
 
     private static final int PERMISSION_REQUEST_COARSE_LOCATION = 233;
     private static final String TAG = MainActivity.class.getSimpleName();
@@ -33,14 +40,46 @@ public class MainActivity extends AppCompatActivity {
     private TextView log_view;
     private List<BLEDeviceBean> devices = new ArrayList<>();
     private DevicesAdapter devicesAdapter;
+    private MediaPlayer mediaPlayer ;
+    //播放
+    private Button btn_play,btn_stop;
 
-    private void log_show(String message)
-    {
+    private void initMediaPlayer()  {
+
+        mediaPlayer = MediaPlayer.create(this,R.raw.wav1);
+        try {
+                  mediaPlayer.prepare();
+        } catch (Exception e) {
+            log_show("Music open error");
+            e.printStackTrace();
+
+        }
+        /*
+        AssetFileDescriptor file = getResources().openRawResourceFd(R.raw.wav1);
+        try {
+            mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(),
+                    file.getLength());
+            mediaPlayer.prepare();
+            file.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+            log_show("Music open error");
+        }
+        */
+
+        mediaPlayer.setVolume(0.5f, 0.5f);
+        mediaPlayer.setLooping(true);
+        log_show("Music init complete");
+       // mp.start();
+    }
+
+    private void log_show(String message) {
         log_view.append(message);
         log_view.append("\n");
 
 
     }
+
     private BluetoothSingle.BluetoothChangeListener bluetoothChangeListener = new BluetoothSingle.BluetoothChangeListener() {
         @Override
         public void openFailed(String message) {
@@ -70,8 +109,8 @@ public class MainActivity extends AppCompatActivity {
                     if (device.getName() == null) {
                         deviceName = "No Name";
                     }
-                        //String name = BleUtil.parseAdertisedData(bytes).getName();
-                        //bean.setName(name);
+                    //String name = BleUtil.parseAdertisedData(bytes).getName();
+                    //bean.setName(name);
                     //} else {
                     //    bean.setName(device.getName());
                     //}
@@ -104,15 +143,12 @@ public class MainActivity extends AppCompatActivity {
         public void stopScanningDevices(String message) {
             //Toast.makeText(MainActivity.this, message, Toast.LENGTH_SHORT).show();
             log_show(message);
-
-
         }
 
         @Override
         public void connectBluetoothFailed(String message) {
             //Toast.makeText(MainActivity.this, message, Toast.LENGTH_SHORT).show();
             log_show(message);
-
         }
 
         @Override
@@ -130,12 +166,8 @@ public class MainActivity extends AppCompatActivity {
                 public void run() {
                     //Toast.makeText(MainActivity.this, "连接蓝牙成功", Toast.LENGTH_LONG).show();
                     log_show("连接蓝牙成功");
-
-
                 }
             });
-
-
         }
 
         @Override
@@ -178,12 +210,28 @@ public class MainActivity extends AppCompatActivity {
         if (this.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, PERMISSION_REQUEST_COARSE_LOCATION);
         }
-        BluetoothSingle.getInstance().registerBTListener(bluetoothChangeListener);
 
+        log_view = findViewById(R.id.txt_log_view);
+        log_view.setMovementMethod(ScrollingMovementMethod.getInstance());
+
+        BluetoothSingle.getInstance().registerBTListener(bluetoothChangeListener);
+        //初始化播放器
+        //权限判断，如果没有权限就请求权限
+        if (ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 1);
+        }
+
+        initMediaPlayer();//初始化播放器 MediaPlayer
+        //播放按钮
+        btn_play = findViewById(R.id.btn_play);
+        btn_play.setOnClickListener(this);
+
+        btn_stop =findViewById(R.id.btn_stop);
+        btn_stop.setOnClickListener(this);
 
         devicesList = findViewById(R.id.recycler_view);
         //添加Android自带的分割线
-        devicesList.addItemDecoration(new DividerItemDecoration(this,DividerItemDecoration.VERTICAL));
+        devicesList.addItemDecoration(new DividerItemDecoration(this, DividerItemDecoration.VERTICAL));
 
         devicesList.setLayoutManager(new LinearLayoutManager(this));
         devicesAdapter = new DevicesAdapter(this, devices);
@@ -191,20 +239,15 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onItemClick(BLEDeviceBean device) {
                 //去连接
-
-                //Toast.makeText(MainActivity.this, "去连接 +" + device.getName(), Toast.LENGTH_SHORT).show();
-                String message = "去连接 +" + device.getName()+"\n";
+          //Toast.makeText(MainActivity.this, "去连接 +" + device.getName(), Toast.LENGTH_SHORT).show();
+                String message = "去连接 +" + device.getName() + "\n";
                 log_show(message);
-
-
                 BluetoothSingle.getInstance().stopScanningDevice();//停止扫描设备
                 BluetoothSingle.getInstance().startScaningServices(getApplicationContext(), device.getAddress());//连接蓝牙+扫描服务
             }
         });
 
         devicesList.setAdapter(devicesAdapter);
-        log_view = findViewById(R.id.txt_log_view);
-        log_view.setMovementMethod(ScrollingMovementMethod.getInstance());
 
 
 
@@ -219,6 +262,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        log_show("ver1.11");
         sendButton = findViewById(R.id.btn_sleep);
         sendButton.setOnClickListener(new View.OnClickListener() {
 
@@ -226,12 +270,24 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
 //                    byte[] ff6206FD0100FD01012C05FES = {(byte)0xFF,0x62,0x06,(byte)0xFD,0x01,0x00,(byte)0xFD,0x01,0x01,0x2C,0x05,(byte)0xFE};
-                String led_blink_str = "FF620600FD01FD01012C05FE";
+                String led_blink_str = "FF6106010000012C05FE";
                 byte[] led_blink_byte = TransformUtil.getInstance().hexStringToByteArray(led_blink_str);
 //                byte[] ff6206FD0100FD01012C05FES = {0x01, (byte) 0xFC, 0x04, 0x00};
-              //BluetoothSingle.getInstance().writeString("0xFF0x620x060xFD0x010x000xFD0x010x010x2C0x050xFE");
-                log_show("send:"+led_blink_str);
+                //BluetoothSingle.getInstance().writeString("0xFF0x620x060xFD0x010x000xFD0x010x010x2C0x050xFE");
+
+                //发送整体时间，30分钟
+                String full_time_string = "FF600400000708FE";
+                byte[] full_time_byte = TransformUtil.getInstance().hexStringToByteArray(full_time_string);
+
+                log_show("send:" + full_time_string);
+                BluetoothSingle.getInstance().writeData(full_time_byte);
+
+                log_show("send:" + led_blink_str);
                 BluetoothSingle.getInstance().writeData(led_blink_byte);
+
+
+                //FF600400000708FE
+
             }
         });
     }
@@ -265,4 +321,17 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    @Override
+    public void onClick(View v) {
+        switch (v.getId()){
+            case R.id.btn_play:
+                log_show("Play");
+                mediaPlayer.start();
+                //如果没在播放中，立刻开始播放。
+                //if(!mediaPlayer.isPlaying()){
+                //    mediaPlayer.start();
+            case R.id.btn_stop:
+                mediaPlayer.stop();
+                }
+    }
 }
