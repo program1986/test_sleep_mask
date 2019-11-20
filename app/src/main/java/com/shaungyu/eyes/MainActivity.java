@@ -9,10 +9,12 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import android.Manifest;
+import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
+import android.bluetooth.BluetoothProfile;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.content.res.AssetFileDescriptor;
@@ -42,8 +44,8 @@ public class MainActivity extends AppCompatActivity  implements View.OnClickList
     private TextView log_view;
     private List<BLEDeviceBean> devices = new ArrayList<>();
     private DevicesAdapter devicesAdapter;
-    private MediaPlayer mediaPlayer = new MediaPlayer();;
-    private MediaPlayer nMediaPlayer = new MediaPlayer();;
+    private MediaPlayer mediaPlayer = new MediaPlayer();
+    private MediaPlayer nMediaPlayer = new MediaPlayer();
     //播放
     private Button btn_play,btn_stop;
     private AudioManager audioManager;
@@ -208,10 +210,15 @@ public class MainActivity extends AppCompatActivity  implements View.OnClickList
     private Button sendButton;
 
     public void changeToHeadset(){
-        audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
-        audioManager.stopBluetoothSco();
-        audioManager.setBluetoothScoOn(false);
+        //audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
+        //audioManager.stopBluetoothSco();
+        //audioManager.setBluetoothScoOn(false);
+        //audioManager.setSpeakerphoneOn(false);
+        //KLog.e("tag", "切换到内放");
+
+
         audioManager.setSpeakerphoneOn(false);
+
     }
 
     public void changeToReceiver(){
@@ -231,8 +238,14 @@ public class MainActivity extends AppCompatActivity  implements View.OnClickList
         setContentView(R.layout.activity_main);
 
         audioManager = (AudioManager) getApplicationContext().getSystemService(Context.AUDIO_SERVICE);
-        //changeToHeadset();
-        changeToReceiver();
+
+        //获取耳机状态
+        int type=get_headset_type();
+        if (type!=-1) {
+            changeToHeadset();
+        }
+
+        //changeToReceiver();
         if (this.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, PERMISSION_REQUEST_COARSE_LOCATION);
         }
@@ -318,6 +331,35 @@ public class MainActivity extends AppCompatActivity  implements View.OnClickList
         });
     }
 
+    private int get_headset_type()
+    {
+        BluetoothAdapter ba;
+        ba = BluetoothAdapter.getDefaultAdapter();
+        if (ba == null) {
+            return -1;
+        }
+
+        int a2dp=-1,headset=-1,health=-1;
+        if (ba.isEnabled()) {
+            a2dp = ba.getProfileConnectionState(BluetoothProfile.A2DP);
+            //可操控蓝牙设备，如带播放暂停功能的蓝牙耳机
+            headset = ba.getProfileConnectionState(BluetoothProfile.HEADSET);
+            //蓝牙头戴式耳机，支持语音输入输出
+            health = ba.getProfileConnectionState(BluetoothProfile.HEALTH);
+        }
+
+        int flag = -1;
+        if (a2dp == BluetoothProfile.STATE_CONNECTED) {
+            flag = a2dp;
+        } else if (headset == BluetoothProfile.STATE_CONNECTED) {
+            flag = headset;
+        } else if (health == BluetoothProfile.STATE_CONNECTED) {
+            flag = health;
+        }
+
+        return flag;
+
+    }
 
     private String getType(int type) {
         String result = "unknown type";
@@ -355,8 +397,8 @@ public class MainActivity extends AppCompatActivity  implements View.OnClickList
                 //解决方法
                 //https://stackoverflow.com/questions/26274182/not-able-to-achieve-gapless-audio-looping-so-far-on-android
 
-                testLoopPlayer();
-                //mediaPlayer.start();// 这样使用会出现停顿
+                //testLoopPlayer();
+                mediaPlayer.start();// 这样使用会出现停顿
                 //如果没在播放中，立刻开始播放。
                 //if(!mediaPlayer.isPlaying()){
                 //    mediaPlayer.start();
