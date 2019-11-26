@@ -50,6 +50,10 @@ public class MainActivity extends AppCompatActivity  implements View.OnClickList
     private Button btn_play,btn_stop;
     private AudioManager audioManager;
 
+    static {
+        System.loadLibrary("native-lib");
+    }
+
     private void initMediaPlayer()  {
 
 
@@ -87,6 +91,8 @@ public class MainActivity extends AppCompatActivity  implements View.OnClickList
 
 
     }
+
+    public native String stringFromJNI();
 
     private BluetoothSingle.BluetoothChangeListener bluetoothChangeListener = new BluetoothSingle.BluetoothChangeListener() {
         @Override
@@ -237,6 +243,8 @@ public class MainActivity extends AppCompatActivity  implements View.OnClickList
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+
+
         audioManager = (AudioManager) getApplicationContext().getSystemService(Context.AUDIO_SERVICE);
 
         //获取耳机状态
@@ -252,6 +260,7 @@ public class MainActivity extends AppCompatActivity  implements View.OnClickList
 
         log_view = findViewById(R.id.txt_log_view);
         log_view.setMovementMethod(ScrollingMovementMethod.getInstance());
+        log_view.append(stringFromJNI());
 
         BluetoothSingle.getInstance().registerBTListener(bluetoothChangeListener);
         //初始化播放器

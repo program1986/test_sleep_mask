@@ -10,6 +10,14 @@ android {
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        externalNativeBuild{
+            cmake{
+                cppFlags "-std=c++11"//这里选择cpp设置
+
+                //相对于build.gradle的路径，如果是同一个目录，直接写"CMakeLists.txt"(完全一致),如果在当前目录xxx下
+                //则为"xxx/CMakeLists.txt"
+            }
+        }
     }
     buildTypes {
         release {
@@ -17,6 +25,15 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
+
+    externalNativeBuild {
+        cmake {
+            path "CMakeLists.txt"
+            //如果要添加C++11支持就是 cppFlags "-std=c++11"
+            version "3.10.2"
+        }
+    }
+
 }
 
 dependencies {
@@ -29,3 +46,4 @@ dependencies {
     implementation 'androidx.recyclerview:recyclerview:1.0.0'
     implementation 'androidx.media2:media2:1.0.0-alpha04'
 }
+
